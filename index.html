@@ -44,7 +44,7 @@
             <section id="directSection" class="subsection">
               <div class="section-title"><div><span class="eyebrow">DIRECT ASSIGNMENT</span><h3>直接割当</h3></div><span class="badge">旅団未満</span></div>
               <label class="personnel-field">人員数<input id="unitPersonnel" type="number" min="0" step="1"></label>
-              <div class="assignment-add"><select id="equipmentPicker"></select><input id="equipmentQty" type="number" min="1" value="1"><button id="addEquipmentBtn" class="primary">装備を追加</button></div>
+              <div class="assignment-add"><select id="equipmentCategoryFilter" aria-label="兵器区分フィルター"></select><select id="equipmentPicker" aria-label="兵器品目"></select><input id="equipmentQty" type="number" min="1" value="1"><button id="addEquipmentBtn" class="primary">装備を追加</button></div>
               <div id="directEquipment"></div>
             </section>
             <section class="subsection">
@@ -90,7 +90,7 @@
 
   <div id="modal" class="modal" hidden><div class="modal-card"><div class="modal-heading"><h2 id="modalTitle"></h2><button id="modalClose">×</button></div><div id="modalBody"></div><div class="modal-actions"><button id="modalCancel">キャンセル</button><button id="modalConfirm" class="primary">保存</button></div></div></div>
   <div id="toast" class="toast" role="status"></div>
-  <script src="catalog-data.js?v=0.4.0"></script>
-  <script src="app.js?v=0.4.0"></script>
+  <script src="catalog-data.js?v=0.4.1"></script>
+  <script src="app.js?v=0.4.1"></script>
 </body>
 </html>

@@ -35,7 +35,7 @@ const { pathToFileURL } = require("url");
   const initial = d.querySelector("#aggregatePersonnel").textContent;
   if (!initial.includes("1,700")) throw new Error(`初期集計が不正: ${initial}`);
   const detail = d.querySelector("#aggregateEquipment").textContent;
-  if (!detail.includes("主力戦車") || !detail.includes("88") || !detail.includes("HIFV-40") || !detail.includes("40")) {
+  if (!detail.includes("M1A2") || !detail.includes("88") || !detail.includes("HIFV-40") || !detail.includes("40")) {
     throw new Error(`初期装備集計が不正: ${detail}`);
   }
   const friendlySymbol = d.querySelector("#symbolPreview svg");
@@ -44,12 +44,16 @@ const { pathToFileURL } = require("url");
   if (Math.abs(actualAspect - 1.5) > 0.001) throw new Error(`APP-6D味方フレーム実寸が3:2ではない: ${actualAspect}`);
   if (d.documentElement.dataset.theme !== "dark") throw new Error("常時ダークモードになっていない");
   if (d.querySelector("#themeBtn")) throw new Error("廃止したライトモード切替が残っている");
-  if (!d.querySelector("#catalogCount").textContent.includes("全1,654件")) throw new Error(`兵器カタログ件数が不正: ${d.querySelector("#catalogCount").textContent}`);
+  if (!d.querySelector("#catalogCount").textContent.includes("全1,652件")) throw new Error(`兵器カタログ件数が不正: ${d.querySelector("#catalogCount").textContent}`);
   input("#catalogSearch", "AN/TPS-77");
   const radarResult = d.querySelector("#catalogTable").textContent;
   if (!radarResult.includes("可搬式／自走式レーダー") || !radarResult.includes("生産国: アメリカ")) throw new Error(`兵器データが不足: ${radarResult}`);
   input("#catalogSearch", "億円");
   if (!d.querySelector("#catalogCount").textContent.includes("該当0件")) throw new Error("価格データがカタログへ混入している");
+  input("#catalogSearch", "主力戦車");
+  if ([...d.querySelectorAll("#catalogTable strong")].some(x=>x.textContent==="主力戦車")) throw new Error("汎用ノイズ品目『主力戦車』が残っている");
+  input("#catalogSearch", "小銃");
+  if ([...d.querySelectorAll("#catalogTable strong")].some(x=>x.textContent==="小銃")) throw new Error("汎用ノイズ品目『小銃』が残っている");
   input("#catalogSearch", "");
   change("#unitAffiliation", "hostile");
   const hostileSymbol = d.querySelector("#symbolPreview svg");
@@ -57,12 +61,15 @@ const { pathToFileURL } = require("url");
   change("#unitAffiliation", "friendly");
 
   click('[data-action="select"][data-id="u-tk1"]');
-  change("#equipmentCategoryFilter", "可搬式／自走式レーダー");
+  if (d.querySelector("#equipmentCategoryFilter").options.length > 17) throw new Error("兵器区分が大分類へ整理されていない");
+  change("#equipmentCategoryFilter", "レーダー・センサー");
   const filteredOptions = [...d.querySelectorAll("#equipmentPicker option")];
-  if (filteredOptions.length !== 29 || filteredOptions.some(x => x.dataset.category !== "可搬式／自走式レーダー")) throw new Error(`兵器区分フィルターが不正: ${filteredOptions.length}件`);
+  if (filteredOptions.length !== 32 || filteredOptions.some(x => x.dataset.category !== "レーダー・センサー")) throw new Error(`兵器区分フィルターが不正: ${filteredOptions.length}件`);
   if (!d.querySelector("#equipmentPicker").textContent.includes("AN/TPS-77")) throw new Error("区分フィルター後に対象兵器が表示されない");
   change("#equipmentCategoryFilter", "");
-  change('.assignment-qty[data-id="eq-mbt"]', "31");
+  const sampleTankOption=[...d.querySelectorAll("#equipmentPicker option")].find(x=>x.textContent.startsWith("M1A2 —"));
+  if (!sampleTankOption) throw new Error("サンプル戦車M1A2が見つからない");
+  change(`.assignment-qty[data-id="${sampleTankOption.value}"]`, "31");
   click('[data-action="select"][data-id="u-bde"]');
   const updated = d.querySelector("#aggregateEquipment").textContent;
   if (!updated.includes("75")) throw new Error(`即時再集計が不正: ${updated}`);
@@ -77,6 +84,6 @@ const { pathToFileURL } = require("url");
   if (d.querySelector('#orgSvg > rect').getAttribute('fill') !== '#ffffff') throw new Error("組織図背景が白ではない");
   if (errors.length) throw new Error(`画面エラー: ${errors.join(" / ")}`);
 
-  console.log(JSON.stringify({ catalogItems: 1654, importedWeaponRows: 1651, priceDataMatches: 0, categoryFilterRadarItems: 29, initialPersonnel: initial.trim(), initialTankTotal: 88, updatedTankTotal: 75, friendlyFrameActualAspect: actualAspect, hostileFrameBounds: "1:1", appDarkOnly: true, chartBackground: "white", connectorGap, chartNodes: nodeCount, pageErrors: errors.length }));
+  console.log(JSON.stringify({ catalogItems: 1652, importedWeaponRows: 1651, broadCategories: 16, removedGenericItems: ["主力戦車","小銃"], sampleTank: "M1A2", priceDataMatches: 0, categoryFilterRadarItems: 32, initialPersonnel: initial.trim(), initialTankTotal: 88, updatedTankTotal: 75, friendlyFrameActualAspect: actualAspect, hostileFrameBounds: "1:1", appDarkOnly: true, chartBackground: "white", connectorGap, chartNodes: nodeCount, pageErrors: errors.length }));
   dom.window.close();
 })().catch(error => { console.error(error); process.exit(1); });

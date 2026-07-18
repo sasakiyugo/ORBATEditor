@@ -34,7 +34,10 @@ const { pathToFileURL } = require("url");
     throw new Error(`初期装備集計が不正: ${detail}`);
   }
   const friendlySymbol = d.querySelector("#symbolPreview svg");
-  if (friendlySymbol.dataset.frameAspect !== "1.5") throw new Error("APP-6D味方フレームが3:2ではない");
+  const friendlyFrame = friendlySymbol.querySelector("rect.node-frame");
+  const actualAspect = Number(friendlyFrame.getAttribute("width")) / Number(friendlyFrame.getAttribute("height"));
+  if (Math.abs(actualAspect - 1.5) > 0.001) throw new Error(`APP-6D味方フレーム実寸が3:2ではない: ${actualAspect}`);
+  if (!d.querySelector("#themeBtn").textContent.includes("ダーク")) throw new Error("ダークモード切替ボタンが表示されていない");
   click("#themeBtn");
   if (d.documentElement.dataset.theme !== "dark") throw new Error("ダークモードへ切り替わらない");
   click("#themeBtn");
@@ -55,6 +58,6 @@ const { pathToFileURL } = require("url");
   if (nodeCount < 4) throw new Error(`組織図ノード不足: ${nodeCount}`);
   if (errors.length) throw new Error(`画面エラー: ${errors.join(" / ")}`);
 
-  console.log(JSON.stringify({ initialPersonnel: initial.trim(), initialTankTotal: 88, updatedTankTotal: 75, friendlyFrameAspect: "3:2", hostileFrameBounds: "1:1", darkMode: true, chartNodes: nodeCount, pageErrors: errors.length }));
+  console.log(JSON.stringify({ initialPersonnel: initial.trim(), initialTankTotal: 88, updatedTankTotal: 75, friendlyFrameActualAspect: actualAspect, hostileFrameBounds: "1:1", darkMode: true, chartNodes: nodeCount, pageErrors: errors.length }));
   dom.window.close();
 })().catch(error => { console.error(error); process.exit(1); });

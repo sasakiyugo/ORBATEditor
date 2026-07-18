@@ -19,15 +19,25 @@ const DEFAULT_TYPES = [
   ["signal","通信"],["logistics","補給／兵站"],["medical","衛生"],["aviation","航空"],["hq","司令部"]
 ].map(([id,name])=>({id,name}));
 
+const BASE_CATALOG = [
+  {id:"eq-mbt",name:"主力戦車",category:"戦車",specs:"",notes:""},
+  {id:"eq-hifv40",name:"HIFV-40",category:"装甲車両",specs:"",notes:""},
+  {id:"eq-rifle",name:"小銃",category:"小火器",specs:"",notes:""}
+];
+const IMPORTED_CATALOG = (window.ORBAT_CATALOG_DATA||[]).map(([name,category,country],i)=>({
+  id:`catalog-${String(i+1).padStart(4,"0")}`,name,category:category||"その他",
+  specs:country?`生産国: ${country}`:"",notes:"兵器価格一覧(1).csvから価格を除外して収録"
+}));
+const CATALOG_SEED = [...BASE_CATALOG,...IMPORTED_CATALOG];
+const DEFAULT_CATEGORIES = [...new Set(["小火器","迫撃砲","火砲","戦車","装甲車両","対空","誘導弾","車両","航空機","その他",...IMPORTED_CATALOG.map(x=>x.category)])];
+const catalogKey = x => `${x.name}\u0000${x.category}\u0000${x.specs||""}`;
+function mergeBuiltInCatalog(project){const keys=new Set(project.catalog.map(catalogKey)),ids=new Set(project.catalog.map(x=>x.id));let added=0;for(const item of CATALOG_SEED){if(keys.has(catalogKey(item)))continue;const copy=clone(item);if(ids.has(copy.id))copy.id=uid("catalog");project.catalog.push(copy);keys.add(catalogKey(copy));ids.add(copy.id);added++}project.categories=[...new Set([...(project.categories||[]),...DEFAULT_CATEGORIES])];return added}
+
 const sampleProject = () => ({
   meta:{name:"サンプル編成",version:1,updatedAt:new Date().toISOString()},
   echelons:clone(DEFAULT_ECHELONS), unitTypes:clone(DEFAULT_TYPES),
-  categories:["小火器","迫撃砲","火砲","戦車","装甲車両","対空","誘導弾","車両","航空機","その他"],
-  catalog:[
-    {id:"eq-mbt",name:"主力戦車",category:"戦車",specs:"",notes:""},
-    {id:"eq-hifv40",name:"HIFV-40",category:"装甲車両",specs:"",notes:""},
-    {id:"eq-rifle",name:"小銃",category:"小火器",specs:"",notes:""}
-  ],
+  categories:clone(DEFAULT_CATEGORIES),
+  catalog:clone(CATALOG_SEED),
   units:[
     {id:"u-div",name:"第1機甲師団",abbr:"1AD",parentId:null,echelonId:"division",unitTypeId:"armor",affiliation:"friendly",sortOrder:1,personnel:null,equipment:[],notes:""},
     {id:"u-bde",name:"第1機甲旅団",abbr:"1AB",parentId:"u-div",echelonId:"brigade",unitTypeId:"armor",affiliation:"friendly",sortOrder:1,personnel:null,equipment:[],notes:""},
@@ -132,7 +142,7 @@ function deleteUnit(id){const u=unit(id),n=descendants(id).length;if(!u||!confir
 function duplicateUnit(id){const src=unit(id);if(!src)return;mutate(()=>{const map=new Map();const copyNode=(old,parentId)=>{const nu=clone(old);nu.id=uid("u");nu.name=old===src?`${old.name}（複製）`:old.name;nu.parentId=parentId;nu.sortOrder=children(parentId).length+1;map.set(old.id,nu.id);state.units.push(nu);children(old.id).forEach(c=>copyNode(c,nu.id));return nu};selectedId=copyNode(src,src.parentId).id})}
 function moveSibling(id,dir){const u=unit(id),s=children(u.parentId),i=s.findIndex(x=>x.id===id),j=i+dir;if(j<0||j>=s.length)return;mutate(()=>{const tmp=s[i].sortOrder;s[i].sortOrder=s[j].sortOrder;s[j].sortOrder=tmp;if(s[i].sortOrder===s[j].sortOrder){s.forEach((x,k)=>x.sortOrder=k+1)}})}
 
-function renderCatalog(){const q=$("catalogSearch").value.toLowerCase();const rows=state.catalog.filter(x=>!q||`${x.name} ${x.category} ${x.specs}`.toLowerCase().includes(q)).sort((a,b)=>a.category.localeCompare(b.category,"ja")||a.name.localeCompare(b.name,"ja"));$("catalogTable").innerHTML=`<table class="data-table"><thead><tr><th>区分</th><th>品目</th><th>諸元</th><th>配備先</th><th></th></tr></thead><tbody>${rows.map(x=>{const uses=state.units.filter(u=>(u.equipment||[]).some(a=>a.catalogId===x.id));return `<tr><td>${esc(x.category)}</td><td><strong>${esc(x.name)}</strong></td><td>${esc(x.specs||"")}</td><td>${uses.length?`${uses.length}部隊 / ${uses.reduce((s,u)=>s+int(u.equipment.find(a=>a.catalogId===x.id)?.quantity),0)}`:"—"}</td><td><button data-catalog-edit="${x.id}">編集</button> <button class="danger" data-catalog-delete="${x.id}">削除</button></td></tr>`}).join("")}</tbody></table>`}
+function renderCatalog(){const q=$("catalogSearch").value.toLowerCase(),limit=300;const matches=state.catalog.filter(x=>!q||`${x.name} ${x.category} ${x.specs}`.toLowerCase().includes(q)).sort((a,b)=>a.category.localeCompare(b.category,"ja")||a.name.localeCompare(b.name,"ja")),rows=matches.slice(0,limit);$("catalogCount").textContent=`全${state.catalog.length.toLocaleString()}件／該当${matches.length.toLocaleString()}件${matches.length>limit?`（先頭${limit}件を表示）`:""}`;$("catalogTable").innerHTML=`<table class="data-table"><thead><tr><th>区分</th><th>品目</th><th>生産国・諸元</th><th>配備先</th><th></th></tr></thead><tbody>${rows.map(x=>{const uses=state.units.filter(u=>(u.equipment||[]).some(a=>a.catalogId===x.id));return `<tr><td>${esc(x.category)}</td><td><strong>${esc(x.name)}</strong></td><td>${esc(x.specs||"")}</td><td>${uses.length?`${uses.length}部隊 / ${uses.reduce((s,u)=>s+int(u.equipment.find(a=>a.catalogId===x.id)?.quantity),0)}`:"—"}</td><td><button data-catalog-edit="${x.id}">編集</button> <button class="danger" data-catalog-delete="${x.id}">削除</button></td></tr>`}).join("")}</tbody></table>`}
 function editCatalog(id=null){const item=id?catalogItem(id):{name:"",category:state.categories[0]||"その他",specs:"",notes:""};modal(id?"品目を編集":"品目を追加",`<label>名称<input id="mCatName" value="${esc(item.name)}"></label><label>区分<input id="mCatCategory" list="categoryList" value="${esc(item.category)}"><datalist id="categoryList">${state.categories.map(x=>`<option value="${esc(x)}">`).join("")}</datalist></label><label>諸元<input id="mCatSpecs" value="${esc(item.specs)}"></label><label>備考<textarea id="mCatNotes">${esc(item.notes)}</textarea></label>`,()=>{const name=$("mCatName").value.trim(),category=$("mCatCategory").value.trim()||"その他";if(!name)return false;mutate(()=>{if(!state.categories.includes(category))state.categories.push(category);if(id)Object.assign(catalogItem(id),{name,category,specs:$("mCatSpecs").value,notes:$("mCatNotes").value});else state.catalog.push({id:uid("eq"),name,category,specs:$("mCatSpecs").value,notes:$("mCatNotes").value})});return true})}
 function deleteCatalog(id){const x=catalogItem(id),uses=state.units.filter(u=>(u.equipment||[]).some(a=>a.catalogId===id));if(uses.length){alert(`「${x.name}」は ${uses.length} 部隊で使用中です。割当を削除してから再実行してください。\n\n${uses.map(u=>u.name).join("\n")}`);return}if(confirm(`「${x.name}」を削除しますか？`))mutate(()=>state.catalog=state.catalog.filter(c=>c.id!==id))}
 
@@ -154,7 +164,7 @@ function exportRollup(kind="csv"){const rows=[["部隊","エシュロン","人�
 
 function bind(){
   document.querySelectorAll(".view-btn").forEach(b=>b.onclick=()=>switchView(b.dataset.view));$("addRootBtn").onclick=()=>addUnit(null);$("undoBtn").onclick=undo;$("redoBtn").onclick=redo;$("saveBtn").onclick=saveJson;$("openBtn").onclick=()=>$("fileInput").click();$("newBtn").onclick=()=>{if(dirty&&!confirm("未保存の変更を破棄しますか？"))return;state=sampleProject();history=[];future=[];selectedId="u-bde";dirty=false;renderAll()};
-  $("fileInput").onchange=async e=>{try{const data=JSON.parse(await e.target.files[0].text());validateProject(data);state=data;state.categories??=[...new Set(state.catalog.map(x=>x.category))];state.units.forEach(u=>{u.equipment??=[];u.affiliation??="friendly";u.sortOrder??=1});history=[];future=[];selectedId=state.units[0]?.id;dirty=false;renderAll();toast("プロジェクトを読み込みました")}catch(err){alert(`読込に失敗しました: ${err.message}`)}e.target.value=""};
+  $("fileInput").onchange=async e=>{try{const data=JSON.parse(await e.target.files[0].text());validateProject(data);const added=mergeBuiltInCatalog(data);state=data;state.units.forEach(u=>{u.equipment??=[];u.affiliation??="friendly";u.sortOrder??=1});history=[];future=[];selectedId=state.units[0]?.id;dirty=added>0;renderAll();toast(`プロジェクトを読み込みました${added?`（兵器${added}件を補完）`:""}`)}catch(err){alert(`読込に失敗しました: ${err.message}`)}e.target.value=""};
   $("unitTree").onclick=e=>{const b=e.target.closest("[data-action]");if(!b)return;const {action,id}=b.dataset;if(action==="select"){selectedId=id;renderAll()}if(action==="toggle"){collapsed.has(id)?collapsed.delete(id):collapsed.add(id);renderTree()}if(action==="add")addUnit(id);if(action==="up")moveSibling(id,-1);if(action==="down")moveSibling(id,1)};
   $("treeSearch").oninput=renderTree;$("expandAllBtn").onclick=()=>{collapsed.clear();renderTree()};$("collapseAllBtn").onclick=()=>{collapsed=new Set(state.units.map(x=>x.id));renderTree()};
   const fieldMap={unitName:"name",unitAbbr:"abbr",unitEchelon:"echelonId",unitType:"unitTypeId",unitAffiliation:"affiliation",unitNotes:"notes"};Object.entries(fieldMap).forEach(([id,key])=>$(id).onchange=()=>mutate(()=>unit(selectedId)[key]=$(id).value));

@@ -57,9 +57,9 @@ const { pathToFileURL } = require("url");
   const connector = d.querySelector('#orgSvg path[data-from][data-to]');
   const connectorGap = Number(connector.dataset.nodeY) - Number(connector.dataset.endY);
   if (connectorGap < 14) throw new Error(`接続線と子ノードの間隔不足: ${connectorGap}`);
-  if (d.querySelector('#orgSvg > rect').getAttribute('fill') !== '#0e1822') throw new Error("組織図背景がダークではない");
+  if (d.querySelector('#orgSvg > rect').getAttribute('fill') !== '#ffffff') throw new Error("組織図背景が白ではない");
   if (errors.length) throw new Error(`画面エラー: ${errors.join(" / ")}`);
 
-  console.log(JSON.stringify({ initialPersonnel: initial.trim(), initialTankTotal: 88, updatedTankTotal: 75, friendlyFrameActualAspect: actualAspect, hostileFrameBounds: "1:1", darkOnly: true, connectorGap, chartNodes: nodeCount, pageErrors: errors.length }));
+  console.log(JSON.stringify({ initialPersonnel: initial.trim(), initialTankTotal: 88, updatedTankTotal: 75, friendlyFrameActualAspect: actualAspect, hostileFrameBounds: "1:1", appDarkOnly: true, chartBackground: "white", connectorGap, chartNodes: nodeCount, pageErrors: errors.length }));
   dom.window.close();
 })().catch(error => { console.error(error); process.exit(1); });

@@ -19,19 +19,18 @@ const DEFAULT_TYPES = [
   ["signal","通信"],["logistics","補給／兵站"],["medical","衛生"],["aviation","航空"],["hq","司令部"]
 ].map(([id,name])=>({id,name}));
 
-const BASE_CATALOG = [
-  {id:"eq-mbt",name:"主力戦車",category:"戦車",specs:"",notes:""},
-  {id:"eq-hifv40",name:"HIFV-40",category:"装甲車両",specs:"",notes:""},
-  {id:"eq-rifle",name:"小銃",category:"小火器",specs:"",notes:""}
-];
-const IMPORTED_CATALOG = (window.ORBAT_CATALOG_DATA||[]).map(([name,category,country],i)=>({
-  id:`catalog-${String(i+1).padStart(4,"0")}`,name,category:category||"その他",
-  specs:country?`生産国: ${country}`:"",notes:"兵器価格一覧(1).csvから価格を除外して収録"
+const BROAD_CATEGORIES=["レーダー・センサー","防空・ミサイル防衛","火砲・ロケット砲","地上発射ミサイル","戦車・機動砲","装甲戦闘車両","工兵・支援車両","水上戦闘艦艇","航空母艦","揚陸・輸送艦艇","潜水艦・水中無人機","補助艦艇","固定翼航空機","回転翼航空機","無人航空機","その他"];
+function broadCategory(type){if(/レーダー/.test(type))return"レーダー・センサー";if(/防空|対空|C-RAM|弾道ミサイル防衛/.test(type))return"防空・ミサイル防衛";if(/火砲|砲兵|迫撃砲|ロケット砲|列車砲|要塞砲|沿岸砲|火炎放射/.test(type))return"火砲・ロケット砲";if(/主力戦車|軽戦車|機動砲|対戦車砲/.test(type))return"戦車・機動砲";if(/工兵|NBC|指揮・観測/.test(type))return"工兵・支援車両";if(/装甲|歩兵戦闘車|偵察車|対戦車ミサイル車両/.test(type))return"装甲戦闘車両";if(/地対地|地対艦|NLOSミサイル/.test(type))return"地上発射ミサイル";if(/潜水艦救難艦|潜水母艦|掃海母艦/.test(type))return"補助艦艇";if(/潜水艦|潜航|UUV|水中無人/.test(type))return"潜水艦・水中無人機";if(/航空母艦|空母/.test(type))return"航空母艦";if(/揚陸|上陸|輸送艦|輸送艇|遠征|エアクッション/.test(type))return"揚陸・輸送艦艇";if(/補給|掃海|敷設|観測艦|情報収集艦|測定艦|追跡艦|救難艦|母艦|砕氷船|油槽船|運搬艦/.test(type))return"補助艦艇";if(/艦|艇|USV|船/.test(type))return"水上戦闘艦艇";if(/無人.*機|無人航空機/.test(type))return"無人航空機";if(/ヘリ/.test(type))return"回転翼航空機";if(/戦闘機|攻撃機|爆撃機|輸送機|哨戒機|偵察機|観測機|給油機|電子戦機|指揮機|早期警戒.*機|ガンシップ|地面効果翼機|練習機/.test(type))return"固定翼航空機";return"その他"}
+const BASE_CATALOG = [{id:"eq-hifv40",name:"HIFV-40",category:"装甲戦闘車両",specs:"原種別: 重装甲歩兵戦闘車",sourceType:"重装甲歩兵戦闘車",notes:"旧世界固有兵器"}];
+const IMPORTED_CATALOG = (window.ORBAT_CATALOG_DATA||[]).map(([name,sourceType,country],i)=>({
+  id:`catalog-${String(i+1).padStart(4,"0")}`,name,category:broadCategory(sourceType),sourceType,
+  specs:[country?`生産国: ${country}`:"",sourceType?`原種別: ${sourceType}`:""].filter(Boolean).join(" / "),notes:"兵器価格一覧(1).csvから価格を除外して収録"
 }));
 const CATALOG_SEED = [...BASE_CATALOG,...IMPORTED_CATALOG];
-const DEFAULT_CATEGORIES = [...new Set(["小火器","迫撃砲","火砲","戦車","装甲車両","対空","誘導弾","車両","航空機","その他",...IMPORTED_CATALOG.map(x=>x.category)])];
+const DEFAULT_CATEGORIES = clone(BROAD_CATEGORIES);
 const catalogKey = x => `${x.name}\u0000${x.category}\u0000${x.specs||""}`;
-function mergeBuiltInCatalog(project){const keys=new Set(project.catalog.map(catalogKey)),ids=new Set(project.catalog.map(x=>x.id));let added=0;for(const item of CATALOG_SEED){if(keys.has(catalogKey(item)))continue;const copy=clone(item);if(ids.has(copy.id))copy.id=uid("catalog");project.catalog.push(copy);keys.add(catalogKey(copy));ids.add(copy.id);added++}project.categories=[...new Set([...(project.categories||[]),...DEFAULT_CATEGORIES])];return added}
+const SAMPLE_TANK=IMPORTED_CATALOG.find(x=>x.name==="M1A2"&&x.sourceType==="主力戦車")||IMPORTED_CATALOG.find(x=>x.sourceType==="主力戦車");
+function mergeBuiltInCatalog(project){const obsolete=new Set(["eq-mbt","eq-rifle"]);for(const u of project.units||[]){const merged=new Map();for(const a of u.equipment||[]){let id=a.catalogId;if(id==="eq-mbt")id=SAMPLE_TANK.id;if(obsolete.has(id))continue;merged.set(id,(merged.get(id)||0)+int(a.quantity))}u.equipment=[...merged].map(([catalogId,quantity])=>({catalogId,quantity}))}project.catalog=project.catalog.filter(x=>!obsolete.has(x.id));const byId=new Map(project.catalog.map(x=>[x.id,x])),keys=new Set(project.catalog.map(catalogKey)),ids=new Set(project.catalog.map(x=>x.id));let added=0;for(const item of CATALOG_SEED){const current=byId.get(item.id);if(current){Object.assign(current,clone(item));continue}if(keys.has(catalogKey(item)))continue;const copy=clone(item);if(ids.has(copy.id))copy.id=uid("catalog");project.catalog.push(copy);keys.add(catalogKey(copy));ids.add(copy.id);added++}project.categories=[...new Set([...DEFAULT_CATEGORIES,...project.catalog.map(x=>x.category)])];return added}
 
 const sampleProject = () => ({
   meta:{name:"サンプル編成",version:1,updatedAt:new Date().toISOString()},
@@ -41,8 +40,8 @@ const sampleProject = () => ({
   units:[
     {id:"u-div",name:"第1機甲師団",abbr:"1AD",parentId:null,echelonId:"division",unitTypeId:"armor",affiliation:"friendly",sortOrder:1,personnel:null,equipment:[],notes:""},
     {id:"u-bde",name:"第1機甲旅団",abbr:"1AB",parentId:"u-div",echelonId:"brigade",unitTypeId:"armor",affiliation:"friendly",sortOrder:1,personnel:null,equipment:[],notes:""},
-    {id:"u-tk1",name:"第1戦車大隊",abbr:"1Tk",parentId:"u-bde",echelonId:"battalion",unitTypeId:"armor",affiliation:"friendly",sortOrder:1,personnel:500,equipment:[{catalogId:"eq-mbt",quantity:44}],notes:""},
-    {id:"u-tk2",name:"第2戦車大隊",abbr:"2Tk",parentId:"u-bde",echelonId:"battalion",unitTypeId:"armor",affiliation:"friendly",sortOrder:2,personnel:500,equipment:[{catalogId:"eq-mbt",quantity:44}],notes:""},
+    {id:"u-tk1",name:"第1戦車大隊",abbr:"1Tk",parentId:"u-bde",echelonId:"battalion",unitTypeId:"armor",affiliation:"friendly",sortOrder:1,personnel:500,equipment:[{catalogId:SAMPLE_TANK.id,quantity:44}],notes:""},
+    {id:"u-tk2",name:"第2戦車大隊",abbr:"2Tk",parentId:"u-bde",echelonId:"battalion",unitTypeId:"armor",affiliation:"friendly",sortOrder:2,personnel:500,equipment:[{catalogId:SAMPLE_TANK.id,quantity:44}],notes:""},
     {id:"u-mech",name:"第1機械化歩兵大隊",abbr:"1Mech",parentId:"u-bde",echelonId:"battalion",unitTypeId:"mech-inf",affiliation:"friendly",sortOrder:3,personnel:700,equipment:[{catalogId:"eq-hifv40",quantity:40}],notes:""}
   ]
 });

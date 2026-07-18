@@ -33,6 +33,15 @@ const { pathToFileURL } = require("url");
   if (!detail.includes("主力戦車") || !detail.includes("88") || !detail.includes("HIFV-40") || !detail.includes("40")) {
     throw new Error(`初期装備集計が不正: ${detail}`);
   }
+  const friendlySymbol = d.querySelector("#symbolPreview svg");
+  if (friendlySymbol.dataset.frameAspect !== "1.5") throw new Error("APP-6D味方フレームが3:2ではない");
+  click("#themeBtn");
+  if (d.documentElement.dataset.theme !== "dark") throw new Error("ダークモードへ切り替わらない");
+  click("#themeBtn");
+  change("#unitAffiliation", "hostile");
+  const hostileSymbol = d.querySelector("#symbolPreview svg");
+  if (hostileSymbol.dataset.frameAspect !== "1" || !hostileSymbol.querySelector("polygon.node-frame")) throw new Error("APP-6D敵フレームが正方形境界の菱形ではない");
+  change("#unitAffiliation", "friendly");
 
   click('[data-action="select"][data-id="u-tk1"]');
   change('.assignment-qty[data-id="eq-mbt"]', "31");
@@ -46,6 +55,6 @@ const { pathToFileURL } = require("url");
   if (nodeCount < 4) throw new Error(`組織図ノード不足: ${nodeCount}`);
   if (errors.length) throw new Error(`画面エラー: ${errors.join(" / ")}`);
 
-  console.log(JSON.stringify({ initialPersonnel: initial.trim(), initialTankTotal: 88, updatedTankTotal: 75, chartNodes: nodeCount, pageErrors: errors.length }));
+  console.log(JSON.stringify({ initialPersonnel: initial.trim(), initialTankTotal: 88, updatedTankTotal: 75, friendlyFrameAspect: "3:2", hostileFrameBounds: "1:1", darkMode: true, chartNodes: nodeCount, pageErrors: errors.length }));
   dom.window.close();
 })().catch(error => { console.error(error); process.exit(1); });

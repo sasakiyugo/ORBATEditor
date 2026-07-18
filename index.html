@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#132238">
   <title>ORBAT Editor</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="theme.css">
 </head>
 <body>
   <header class="app-header">
@@ -13,6 +14,7 @@
     <nav class="header-actions" aria-label="プロジェクト操作">
       <button id="newBtn">新規</button><button id="openBtn">JSON読込</button><button id="saveBtn">JSON保存</button>
       <span class="divider"></span><button id="undoBtn" title="元に戻す (Ctrl+Z)">↶</button><button id="redoBtn" title="やり直し (Ctrl+Y)">↷</button>
+      <button id="themeBtn" title="ライト／ダークモード切替" aria-label="ダークモードに切り替え">☾</button>
       <span class="divider"></span><button data-view="editor" class="view-btn active">編成</button><button data-view="chart" class="view-btn">組織図</button><button data-view="catalog" class="view-btn">兵器カタログ</button><button data-view="settings" class="view-btn">設定</button>
     </nav>
     <input id="fileInput" type="file" accept="application/json,.json" hidden>

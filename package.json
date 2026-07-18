@@ -1,0 +1,12 @@
+{
+  "name": "orbat-editor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Offline ORBAT editor with NATO-style symbols and automatic roll-ups",
+  "scripts": {
+    "test": "node --check app.js && node tests/smoke.cjs"
+  },
+  "devDependencies": {
+    "jsdom": "^26.1.0"
+  }
+}

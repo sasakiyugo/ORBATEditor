@@ -1,6 +1,6 @@
 {
   "name": "orbat-editor",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "private": true,
   "description": "Offline ORBAT editor with NATO-style symbols and automatic roll-ups",
   "scripts": {

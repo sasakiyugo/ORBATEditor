@@ -41,3 +41,6 @@
 :root[data-theme="dark"] .empty-state,
 :root[data-theme="dark"] .legend,
 :root[data-theme="dark"] .content-header p { color: var(--muted); }
+
+.table-filter { display: flex; align-items: center; gap: 14px; }
+.catalog-count { color: var(--muted); font-size: 12px; white-space: nowrap; }

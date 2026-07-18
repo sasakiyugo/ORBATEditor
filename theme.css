@@ -41,7 +41,3 @@
 :root[data-theme="dark"] .empty-state,
 :root[data-theme="dark"] .legend,
 :root[data-theme="dark"] .content-header p { color: var(--muted); }
-
-.theme-toggle { min-width: 84px; white-space: nowrap; }
-:root[data-theme="dark"] .theme-toggle { background: #dce6ef; color: #101d2d; }
-:root[data-theme="dark"] .theme-toggle:hover { background: #fff; color: #080e16; }

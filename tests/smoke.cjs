@@ -26,6 +26,11 @@ const { pathToFileURL } = require("url");
     element.value = value;
     element.dispatchEvent(new dom.window.Event("change", { bubbles: true }));
   };
+  const input = (selector, value) => {
+    const element = d.querySelector(selector);
+    element.value = value;
+    element.dispatchEvent(new dom.window.Event("input", { bubbles: true }));
+  };
 
   const initial = d.querySelector("#aggregatePersonnel").textContent;
   if (!initial.includes("1,700")) throw new Error(`初期集計が不正: ${initial}`);
@@ -39,6 +44,13 @@ const { pathToFileURL } = require("url");
   if (Math.abs(actualAspect - 1.5) > 0.001) throw new Error(`APP-6D味方フレーム実寸が3:2ではない: ${actualAspect}`);
   if (d.documentElement.dataset.theme !== "dark") throw new Error("常時ダークモードになっていない");
   if (d.querySelector("#themeBtn")) throw new Error("廃止したライトモード切替が残っている");
+  if (!d.querySelector("#catalogCount").textContent.includes("全1,654件")) throw new Error(`兵器カタログ件数が不正: ${d.querySelector("#catalogCount").textContent}`);
+  input("#catalogSearch", "AN/TPS-77");
+  const radarResult = d.querySelector("#catalogTable").textContent;
+  if (!radarResult.includes("可搬式／自走式レーダー") || !radarResult.includes("生産国: アメリカ")) throw new Error(`兵器データが不足: ${radarResult}`);
+  input("#catalogSearch", "億円");
+  if (!d.querySelector("#catalogCount").textContent.includes("該当0件")) throw new Error("価格データがカタログへ混入している");
+  input("#catalogSearch", "");
   change("#unitAffiliation", "hostile");
   const hostileSymbol = d.querySelector("#symbolPreview svg");
   if (hostileSymbol.dataset.frameAspect !== "1" || !hostileSymbol.querySelector("polygon.node-frame")) throw new Error("APP-6D敵フレームが正方形境界の菱形ではない");
@@ -60,6 +72,6 @@ const { pathToFileURL } = require("url");
   if (d.querySelector('#orgSvg > rect').getAttribute('fill') !== '#ffffff') throw new Error("組織図背景が白ではない");
   if (errors.length) throw new Error(`画面エラー: ${errors.join(" / ")}`);
 
-  console.log(JSON.stringify({ initialPersonnel: initial.trim(), initialTankTotal: 88, updatedTankTotal: 75, friendlyFrameActualAspect: actualAspect, hostileFrameBounds: "1:1", appDarkOnly: true, chartBackground: "white", connectorGap, chartNodes: nodeCount, pageErrors: errors.length }));
+  console.log(JSON.stringify({ catalogItems: 1654, importedWeaponRows: 1651, priceDataMatches: 0, initialPersonnel: initial.trim(), initialTankTotal: 88, updatedTankTotal: 75, friendlyFrameActualAspect: actualAspect, hostileFrameBounds: "1:1", appDarkOnly: true, chartBackground: "white", connectorGap, chartNodes: nodeCount, pageErrors: errors.length }));
   dom.window.close();
 })().catch(error => { console.error(error); process.exit(1); });

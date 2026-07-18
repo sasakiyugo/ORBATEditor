@@ -57,6 +57,11 @@ const { pathToFileURL } = require("url");
   change("#unitAffiliation", "friendly");
 
   click('[data-action="select"][data-id="u-tk1"]');
+  change("#equipmentCategoryFilter", "可搬式／自走式レーダー");
+  const filteredOptions = [...d.querySelectorAll("#equipmentPicker option")];
+  if (filteredOptions.length !== 29 || filteredOptions.some(x => x.dataset.category !== "可搬式／自走式レーダー")) throw new Error(`兵器区分フィルターが不正: ${filteredOptions.length}件`);
+  if (!d.querySelector("#equipmentPicker").textContent.includes("AN/TPS-77")) throw new Error("区分フィルター後に対象兵器が表示されない");
+  change("#equipmentCategoryFilter", "");
   change('.assignment-qty[data-id="eq-mbt"]', "31");
   click('[data-action="select"][data-id="u-bde"]');
   const updated = d.querySelector("#aggregateEquipment").textContent;
@@ -72,6 +77,6 @@ const { pathToFileURL } = require("url");
   if (d.querySelector('#orgSvg > rect').getAttribute('fill') !== '#ffffff') throw new Error("組織図背景が白ではない");
   if (errors.length) throw new Error(`画面エラー: ${errors.join(" / ")}`);
 
-  console.log(JSON.stringify({ catalogItems: 1654, importedWeaponRows: 1651, priceDataMatches: 0, initialPersonnel: initial.trim(), initialTankTotal: 88, updatedTankTotal: 75, friendlyFrameActualAspect: actualAspect, hostileFrameBounds: "1:1", appDarkOnly: true, chartBackground: "white", connectorGap, chartNodes: nodeCount, pageErrors: errors.length }));
+  console.log(JSON.stringify({ catalogItems: 1654, importedWeaponRows: 1651, priceDataMatches: 0, categoryFilterRadarItems: 29, initialPersonnel: initial.trim(), initialTankTotal: 88, updatedTankTotal: 75, friendlyFrameActualAspect: actualAspect, hostileFrameBounds: "1:1", appDarkOnly: true, chartBackground: "white", connectorGap, chartNodes: nodeCount, pageErrors: errors.length }));
   dom.window.close();
 })().catch(error => { console.error(error); process.exit(1); });

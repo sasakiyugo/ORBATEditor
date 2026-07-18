@@ -72,8 +72,8 @@ function toast(message){const el=$("toast");el.textContent=message;el.classList.
 function download(name,blob){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),500)}
 function storedTheme(){try{return localStorage.getItem("orbat-theme")}catch{return null}}
 function isDark(){return document.documentElement.dataset.theme==="dark"}
-function setTheme(theme){document.documentElement.dataset.theme=theme;document.documentElement.style.colorScheme=theme;const b=$("themeBtn");if(b){b.textContent=theme==="dark"?"☀":"☾";b.title=theme==="dark"?"ライトモードに切り替え":"ダークモードに切り替え";b.setAttribute("aria-label",b.title)}try{localStorage.setItem("orbat-theme",theme)}catch{}}
-function initTheme(){const preferred=storedTheme()||((window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches)?"dark":"light");setTheme(preferred)}
+function setTheme(theme){document.documentElement.dataset.theme=theme;document.documentElement.style.colorScheme=theme;const b=$("themeBtn");if(b){const dark=theme==="dark";b.innerHTML=dark?'<span aria-hidden="true">☀</span> ライト':'<span aria-hidden="true">☾</span> ダーク';b.title=dark?"ライトモードに切り替え":"ダークモードに切り替え";b.setAttribute("aria-label",b.title);b.setAttribute("aria-pressed",String(dark))}try{localStorage.setItem("orbat-theme",theme)}catch{}}
+function initTheme(){const current=document.documentElement.dataset.theme,preferred=current||storedTheme()||((typeof window.matchMedia==="function"&&window.matchMedia("(prefers-color-scheme: dark)").matches)?"dark":"light");setTheme(preferred)}
 
 function renderAll(){ updateHeader(); renderTree(); renderDetail(); renderCatalog(); renderSettings(); populateChartRoots(); if($("chartView").classList.contains("active")) renderChart(); }
 function updateHeader(){ $("projectName").textContent=state.meta.name+(dirty?" • 未保存":"");$("undoBtn").disabled=!history.length;$("redoBtn").disabled=!future.length; }

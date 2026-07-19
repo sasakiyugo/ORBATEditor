@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#132238">
   <title>ORBAT Editor</title>
   <script>document.documentElement.dataset.theme="dark";document.documentElement.style.colorScheme="dark";</script>
-  <link rel="stylesheet" href="styles.css?v=0.5.1">
-  <link rel="stylesheet" href="theme.css?v=0.5.1">
+  <link rel="stylesheet" href="styles.css?v=0.6.0">
+  <link rel="stylesheet" href="theme.css?v=0.6.0">
 </head>
 <body>
   <header class="app-header">
@@ -15,7 +15,7 @@
     <nav class="header-actions" aria-label="プロジェクト操作">
       <button id="newBtn">新規</button><button id="openBtn">JSON読込</button><button id="saveBtn">JSON保存</button>
       <span class="divider"></span><button id="undoBtn" title="元に戻す (Ctrl+Z)">↶</button><button id="redoBtn" title="やり直し (Ctrl+Y)">↷</button>
-      <span class="divider"></span><button data-view="editor" class="view-btn active">編成</button><button data-view="chart" class="view-btn">組織図</button><button data-view="catalog" class="view-btn">兵器カタログ</button><button data-view="settings" class="view-btn">設定</button>
+      <span class="divider"></span><button data-view="editor" class="view-btn active">編成</button><button data-view="chart" class="view-btn">組織図</button><button data-view="operations" class="view-btn">作戦</button><button data-view="catalog" class="view-btn">兵器カタログ</button><button data-view="settings" class="view-btn">設定</button>
     </nav>
     <input id="fileInput" type="file" accept="application/json,.json" hidden>
   </header>
@@ -78,6 +78,66 @@
       <div class="table-card"><div class="table-filter"><input id="catalogSearch" type="search" placeholder="品目名・区分・生産国を検索"><span id="catalogCount" class="catalog-count"></span></div><div id="catalogTable"></div></div>
     </section>
 
+    <section id="operationsView" class="view">
+      <div class="janus-layout">
+        <aside class="janus-sidebar">
+          <div class="panel-heading"><div><span class="eyebrow">JANUS / OPERATIONS</span><h2>作戦一覧</h2></div><button id="newOperationBtn" class="primary">＋ 作戦</button></div>
+          <div id="operationList" class="operation-list"></div>
+          <section class="judge-picker">
+            <span class="eyebrow">UMPIRE CONSOLE</span><h3>審判比較</h3>
+            <label>計画A<select id="judgePlanA"></select></label>
+            <label>計画B<select id="judgePlanB"></select></label>
+            <button id="comparePlansBtn" class="full">計画を比較</button>
+          </section>
+        </aside>
+        <section class="janus-workspace">
+          <div id="operationEmpty" class="empty-state"><div class="empty-symbol">◈</div><h2>JANUS</h2><p>作戦を作成し、ORBATに接地した行動方針と五段落命令を構築する。</p></div>
+          <div id="operationContent" hidden>
+            <div class="janus-header">
+              <div><span class="eyebrow">JOINT OPERATION PLAN</span><h1 id="operationTitle"></h1><span id="operationStatus" class="operation-status"></span></div>
+              <div class="button-row"><button id="duplicateOperationBtn">複製</button><button id="validateOperationBtn">整合性検査</button><button id="submitOperationBtn" class="primary">提出・ロック</button><button id="deleteOperationBtn" class="danger">削除</button></div>
+            </div>
+            <nav class="janus-tabs" aria-label="作戦作成工程">
+              <button data-op-pane="brief" class="active">1 基本情報</button><button data-op-pane="forces">2 戦力</button><button data-op-pane="map">3 作戦図</button><button data-op-pane="coa">4 COA・検査</button><button data-op-pane="order">5 計画書</button><button data-op-pane="judge">審判比較</button>
+            </nav>
+            <div class="janus-scroll">
+              <section id="opPaneBrief" class="operation-pane active">
+                <div class="janus-card"><div class="card-heading"><div><span class="eyebrow">MISSION BRIEF</span><h2>作戦作成ウィザード</h2></div></div><div class="operation-form">
+                  <label>作戦名<input id="opName"></label><label>作戦主体<input id="opActor"></label>
+                  <label>開始日時<input id="opStart" type="datetime-local"></label><label>終了日時<input id="opEnd" type="datetime-local"></label>
+                  <label>敵対勢力<input id="opEnemy"></label><label>作戦地域<input id="opArea"></label>
+                  <label class="wide">指揮官意図<textarea id="opIntent" rows="3"></textarea></label>
+                  <label class="wide">最終状態<textarea id="opEndState" rows="2"></textarea></label>
+                  <label class="wide">達成すべき目的<textarea id="opObjectives" rows="3"></textarea></label>
+                  <label>利用可能時間（時間）<input id="opAvailableHours" type="number" min="0"></label><label>計画移動距離（km）<input id="opDistanceKm" type="number" min="0"></label>
+                  <label>計画平均速度（km/h）<input id="opSpeedKmh" type="number" min="0"></label><label>許容損耗<input id="opAcceptableLosses" placeholder="例：戦力の15%以内"></label>
+                  <label class="wide">失敗条件<textarea id="opFailure" rows="2"></textarea></label>
+                  <label class="wide">交戦規定（ROE）<textarea id="opRoe" rows="2"></textarea></label>
+                  <label class="wide">政治的制約<textarea id="opPolitical" rows="2"></textarea></label>
+                  <label class="wide">使用禁止兵器<textarea id="opProhibited" rows="2"></textarea></label>
+                  <label class="wide">自由記述<textarea id="opFreeText" rows="5"></textarea></label>
+                </div></div>
+              </section>
+              <section id="opPaneForces" class="operation-pane">
+                <div class="janus-card"><div class="card-heading"><div><span class="eyebrow">FORCE PACKAGE</span><h2>戦力パッケージ編成</h2></div></div><div class="force-add"><select id="opUnitPicker"></select><select id="opTaskPicker"><option>主攻</option><option>助攻</option><option>予備</option><option>火力支援</option><option>防空</option><option>ISR</option><option>電子戦</option><option>海上支援</option><option>航空支援</option><option>兵站</option><option>戦略予備</option></select><button id="addOperationUnitBtn" class="primary">部隊を割当</button></div><div id="operationForces"></div></div>
+              </section>
+              <section id="opPaneMap" class="operation-pane">
+                <div class="janus-card"><div class="card-heading"><div><span class="eyebrow">OPERATIONAL OVERLAY</span><h2>統合作戦状況図</h2></div><span class="muted">クリックで座標を追加</span></div><div class="map-toolbar"><select id="mapShapeType"><option value="objective">作戦目標（点）</option><option value="route">進出経路（折線）</option><option value="area">作戦区域（多角形）</option><option value="phase">フェーズライン（折線）</option></select><input id="mapShapeName" placeholder="図形名"><button id="finishShapeBtn">図形確定</button><button id="cancelShapeBtn">入力取消</button></div><div class="operation-map-wrap"><svg id="operationMap" viewBox="0 0 1000 600" aria-label="作戦状況図"></svg></div><div id="operationShapes"></div></div>
+              </section>
+              <section id="opPaneCoa" class="operation-pane">
+                <div class="janus-card"><div class="card-heading"><div><span class="eyebrow">COURSES OF ACTION</span><h2>行動方針</h2></div><button id="generateCoaBtn" class="primary">3案を生成</button></div><p class="janus-note">現版はオフラインの決定論的テンプレートで生成する。部隊・兵器は既存IDのみを参照し、将来のLLMアダプターと交換可能である。</p><div id="coaCards" class="coa-grid"></div></div>
+                <div class="janus-card"><div class="card-heading"><div><span class="eyebrow">RULE ENGINE</span><h2>整合性検査</h2></div><button id="runChecksBtn">再検査</button></div><div id="operationChecks"></div></div>
+              </section>
+              <section id="opPaneOrder" class="operation-pane">
+                <div class="janus-card"><div class="card-heading"><div><span class="eyebrow">FIVE-PARAGRAPH ORDER</span><h2>作戦計画書</h2></div><div class="button-row"><button id="exportOperationJsonBtn">JSON出力</button><button id="printOperationBtn" class="primary">PDF印刷</button></div></div><div id="operationOrder" class="operation-order"></div></div>
+              </section>
+              <section id="opPaneJudge" class="operation-pane"><div id="judgeComparison" class="judge-comparison"><div class="janus-card"><p class="muted">左側で比較する2計画を選択する。</p></div></div></section>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+
     <section id="settingsView" class="view content-view">
       <div class="content-header"><div><span class="eyebrow">PROJECT SETTINGS</span><h1>設定</h1><p>独自階梯や架空兵科にも対応できる。</p></div></div>
       <div class="settings-grid">
@@ -90,7 +150,7 @@
 
   <div id="modal" class="modal" hidden><div class="modal-card"><div class="modal-heading"><h2 id="modalTitle"></h2><button id="modalClose">×</button></div><div id="modalBody"></div><div class="modal-actions"><button id="modalCancel">キャンセル</button><button id="modalConfirm" class="primary">保存</button></div></div></div>
   <div id="toast" class="toast" role="status"></div>
-  <script src="catalog-data.js?v=0.5.1"></script>
-  <script src="app.js?v=0.5.1"></script>
+  <script src="catalog-data.js?v=0.6.0"></script>
+  <script src="app.js?v=0.6.0"></script>
 </body>
 </html>

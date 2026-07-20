@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#132238">
   <title>ORBAT Editor</title>
   <script>document.documentElement.dataset.theme="dark";document.documentElement.style.colorScheme="dark";</script>
-  <link rel="stylesheet" href="styles.css?v=0.7.0">
-  <link rel="stylesheet" href="theme.css?v=0.7.0">
+  <link rel="stylesheet" href="styles.css?v=0.8.0">
+  <link rel="stylesheet" href="theme.css?v=0.8.0">
 </head>
 <body>
   <header class="app-header">
@@ -125,8 +125,9 @@
                 <div class="janus-card"><div class="card-heading"><div><span class="eyebrow">OPERATIONAL OVERLAY</span><h2>統合作戦状況図</h2></div><span class="muted">小マス100km／太線10マス1,000km</span></div><div class="map-toolbar"><select id="mapShapeType"><option value="objective">作戦目標（点）</option><option value="route">進出経路（折線）</option><option value="area">作戦区域（多角形）</option><option value="phase">フェーズライン（折線）</option></select><input id="mapShapeName" placeholder="図形名"><button id="finishShapeBtn">図形確定</button><button id="cancelShapeBtn">入力取消</button><label class="map-snap"><input id="mapSnapGrid" type="checkbox" checked> 小マスへスナップ</label><div class="map-zoom"><button id="mapZoomOutBtn" title="縮小">－</button><button id="mapZoomResetBtn">100%</button><button id="mapZoomInBtn" title="拡大">＋</button></div></div><div id="mapDistanceSummary" class="map-distance-summary"></div><div class="operation-map-wrap"><svg id="operationMap" viewBox="0 0 1536 1024" aria-label="旧世界作戦状況図"><image id="operationMapBase" x="0" y="0" width="1536" height="1024" preserveAspectRatio="none"></image><g id="operationMapOverlay"></g></svg></div><div id="operationShapes"></div></div>
               </section>
               <section id="opPaneCoa" class="operation-pane">
-                <div class="janus-card"><div class="card-heading"><div><span class="eyebrow">COURSES OF ACTION</span><h2>行動方針</h2></div><button id="generateCoaBtn" class="primary">3案を生成</button></div><p class="janus-note">現版はオフラインの決定論的テンプレートで生成する。部隊・兵器は既存IDのみを参照し、将来のLLMアダプターと交換可能である。</p><div id="coaCards" class="coa-grid"></div></div>
+                <div class="janus-card"><div class="card-heading"><div><span class="eyebrow">COURSES OF ACTION</span><h2>行動方針</h2></div><div class="button-row"><select id="coaGeneratorMode" aria-label="COA生成方式"><option value="local">ローカル生成</option><option value="external">外部LLM</option></select><button id="generateCoaBtn" class="primary">3案を生成</button></div></div><p id="llmOperationStatus" class="janus-note">ローカル生成は外部送信を行わない。外部LLMは設定画面で接続先を登録し、ボタンを押した時だけ現在の作戦情報を送信する。</p><div id="coaCards" class="coa-grid"></div></div>
                 <div class="janus-card"><div class="card-heading"><div><span class="eyebrow">RULE ENGINE</span><h2>整合性検査</h2></div><button id="runChecksBtn">再検査</button></div><div id="operationChecks"></div></div>
+                <div class="janus-card"><div class="card-heading"><div><span class="eyebrow">RED TEAM</span><h2>敵対的検証</h2></div><button id="runRedTeamBtn">外部LLMで検証</button></div><p class="janus-note">採用COAを敵側司令部の視点から検証する。結果は助言であり、勝敗判定ではない。</p><div id="redTeamResults"></div></div>
               </section>
               <section id="opPaneOrder" class="operation-pane">
                 <div class="janus-card"><div class="card-heading"><div><span class="eyebrow">FIVE-PARAGRAPH ORDER</span><h2>作戦計画書</h2></div><div class="button-row"><button id="exportOperationJsonBtn">JSON出力</button><button id="printOperationBtn" class="primary">PDF印刷</button></div></div><div id="operationOrder" class="operation-order"></div></div>
@@ -142,6 +143,7 @@
       <div class="content-header"><div><span class="eyebrow">PROJECT SETTINGS</span><h1>設定</h1><p>独自階梯や架空兵科にも対応できる。</p></div></div>
       <div class="settings-grid">
         <section class="table-card"><div class="card-heading"><h2>プロジェクト</h2></div><div class="form-pad"><label>プロジェクト名<input id="settingsProjectName"></label></div></section>
+        <section class="table-card"><div class="card-heading"><div><span class="eyebrow">EXTERNAL AI</span><h2>外部LLM接続</h2></div><button id="testLlmBtn">接続テスト</button></div><div class="llm-settings"><label>接続プリセット<select id="llmPreset"><option value="lmstudio">LM Studio（ローカル）</option><option value="custom">OpenAI互換（カスタム）</option></select></label><label>ベースURL<input id="llmBaseUrl" placeholder="http://localhost:1234/v1"></label><label>モデルID<input id="llmModel" placeholder="使用するモデル名"></label><label>APIキー（メモリ保持のみ）<input id="llmApiKey" type="password" autocomplete="off" placeholder="ローカル接続では空欄可"></label><label>タイムアウト（秒）<input id="llmTimeout" type="number" min="10" max="600" value="120"></label><div class="llm-actions"><button id="saveLlmBtn" class="primary">接続設定を保存</button><span id="llmConnectionStatus" class="muted">未接続</span></div><p class="wide muted">APIキーは保存・JSON出力されず、ページを閉じると消える。外部URLへ接続する場合、現在の作戦情報と割当戦力が送信される。HTTPSまたはlocalhostのみ許可する。</p></div></section>
         <section class="table-card"><div class="card-heading"><h2>エシュロン定義</h2><button id="addEchelonBtn">＋追加</button></div><div id="echelonTable"></div></section>
         <section class="table-card"><div class="card-heading"><h2>兵科定義</h2><button id="addUnitTypeBtn">＋追加</button></div><div id="unitTypeTable"></div></section>
       </div>
@@ -150,28 +152,28 @@
 
   <div id="modal" class="modal" hidden><div class="modal-card"><div class="modal-heading"><h2 id="modalTitle"></h2><button id="modalClose">×</button></div><div id="modalBody"></div><div class="modal-actions"><button id="modalCancel">キャンセル</button><button id="modalConfirm" class="primary">保存</button></div></div></div>
   <div id="toast" class="toast" role="status"></div>
-  <script src="catalog-data.js?v=0.7.0"></script>
-  <script src="map-data-01.js?v=0.7.0"></script>
-  <script src="map-data-02.js?v=0.7.0"></script>
-  <script src="map-data-03.js?v=0.7.0"></script>
-  <script src="map-data-04.js?v=0.7.0"></script>
-  <script src="map-data-05.js?v=0.7.0"></script>
-  <script src="map-data-06.js?v=0.7.0"></script>
-  <script src="map-data-07.js?v=0.7.0"></script>
-  <script src="map-data-08.js?v=0.7.0"></script>
-  <script src="map-data-09.js?v=0.7.0"></script>
-  <script src="map-data-10.js?v=0.7.0"></script>
-  <script src="map-data-11.js?v=0.7.0"></script>
-  <script src="map-data-12.js?v=0.7.0"></script>
-  <script src="map-data-13a.js?v=0.7.0"></script>
-  <script src="map-data-13b.js?v=0.7.0"></script>
-  <script src="map-data-14.js?v=0.7.0"></script>
-  <script src="map-data-15.js?v=0.7.0"></script>
-  <script src="map-data-16.js?v=0.7.0"></script>
-  <script src="map-data-17.js?v=0.7.0"></script>
-  <script src="map-data-18.js?v=0.7.0"></script>
-  <script src="map-data-19.js?v=0.7.0"></script>
-  <script src="map-data-20.js?v=0.7.0"></script>
-  <script src="app.js?v=0.7.0"></script>
+  <script src="catalog-data.js?v=0.8.0"></script>
+  <script src="map-data-01.js?v=0.8.0"></script>
+  <script src="map-data-02.js?v=0.8.0"></script>
+  <script src="map-data-03.js?v=0.8.0"></script>
+  <script src="map-data-04.js?v=0.8.0"></script>
+  <script src="map-data-05.js?v=0.8.0"></script>
+  <script src="map-data-06.js?v=0.8.0"></script>
+  <script src="map-data-07.js?v=0.8.0"></script>
+  <script src="map-data-08.js?v=0.8.0"></script>
+  <script src="map-data-09.js?v=0.8.0"></script>
+  <script src="map-data-10.js?v=0.8.0"></script>
+  <script src="map-data-11.js?v=0.8.0"></script>
+  <script src="map-data-12.js?v=0.8.0"></script>
+  <script src="map-data-13a.js?v=0.8.0"></script>
+  <script src="map-data-13b.js?v=0.8.0"></script>
+  <script src="map-data-14.js?v=0.8.0"></script>
+  <script src="map-data-15.js?v=0.8.0"></script>
+  <script src="map-data-16.js?v=0.8.0"></script>
+  <script src="map-data-17.js?v=0.8.0"></script>
+  <script src="map-data-18.js?v=0.8.0"></script>
+  <script src="map-data-19.js?v=0.8.0"></script>
+  <script src="map-data-20.js?v=0.8.0"></script>
+  <script src="app.js?v=0.8.0"></script>
 </body>
 </html>

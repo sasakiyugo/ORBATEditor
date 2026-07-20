@@ -4,6 +4,7 @@ const { pathToFileURL } = require("url");
 
 (async () => {
   const errors = [];
+  const llmRequests = [];
   const dom = await JSDOM.fromFile(path.resolve(__dirname, "..", "index.html"), {
     runScripts: "dangerously",
     resources: "usable",
@@ -13,6 +14,30 @@ const { pathToFileURL } = require("url");
       window.alert = message => errors.push(String(message));
       window.URL.createObjectURL = () => "blob:test";
       window.URL.revokeObjectURL = () => {};
+      window.fetch = async (url, options = {}) => {
+        const request = { url: String(url), headers: options.headers || {}, body: options.body || "" };
+        llmRequests.push(request);
+        const ok = data => ({ ok: true, status: 200, json: async () => data });
+        if (request.url.endsWith("/models")) return ok({ data: [{ id: "test-model" }] });
+        if (!request.url.endsWith("/chat/completions")) return { ok: false, status: 404, json: async () => ({ error: { message: "not found" } }) };
+        const payload = JSON.parse(request.body);
+        const system = payload.messages[0].content;
+        const context = JSON.parse(payload.messages[1].content);
+        if (system.includes("JANUS_COA_JSON_V1")) {
+          const unitId = context.allowedIds.unitIds[0];
+          const equipmentIds = context.allowedIds.equipmentIds.slice(0, 1);
+          return ok({ choices: [{ message: { content: JSON.stringify({ coas: [
+            { type: "direct", title: "LLM直接型", summary: "主攻を集中する案。", phases: ["確認", "主攻", "再編"], risks: ["主攻への集中"], unitTasks: [{ unitId, task: "主攻" }], equipmentIds },
+            { type: "shaping", title: "LLM形成型", summary: "形成作戦を先行する案。", phases: ["形成", "投入", "確保"], risks: ["所要時間"], unitTasks: [{ unitId, task: "助攻" }], equipmentIds },
+            { type: "indirect", title: "LLM間接型", summary: "間接的圧力を用いる案。", phases: ["分析", "圧力", "条件形成"], risks: ["効果の不確実性"], unitTasks: [{ unitId, task: "予備" }], equipmentIds }
+          ] }) } }] });
+        }
+        if (system.includes("JANUS_RED_TEAM_JSON_V1")) return ok({ choices: [{ message: { content: JSON.stringify({ summary: "補給線と指揮通信の冗長性を再確認すべきである。", findings: [
+          { angle: "補給喪失", severity: "high", finding: "単一の補給経路への依存がある。", mitigation: "代替経路と備蓄を準備する。" },
+          { angle: "24時間遅延", severity: "medium", finding: "開始遅延で形成効果が低下しうる。", mitigation: "開始条件と中止条件を明確にする。" }
+        ] }) } }] });
+        return { ok: false, status: 400, json: async () => ({ error: { message: "unknown task" } }) };
+      };
     }
   });
   await new Promise((resolve, reject) => {
@@ -30,6 +55,13 @@ const { pathToFileURL } = require("url");
     const element = d.querySelector(selector);
     element.value = value;
     element.dispatchEvent(new dom.window.Event("input", { bubbles: true }));
+  };
+  const waitFor = async (predicate, message, timeout = 2000) => {
+    const started = Date.now();
+    while (!predicate()) {
+      if (Date.now() - started > timeout) throw new Error(message);
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
   };
 
   const initial = d.querySelector("#aggregatePersonnel").textContent;
@@ -89,6 +121,18 @@ const { pathToFileURL } = require("url");
   if (connectorGap < 14) throw new Error(`接続線と子ノードの間隔不足: ${connectorGap}`);
   if (d.querySelector('#orgSvg > rect').getAttribute('fill') !== '#ffffff') throw new Error("組織図背景が白ではない");
 
+  click('[data-view="settings"]');
+  change('#llmPreset', 'lmstudio');
+  d.querySelector('#llmBaseUrl').value = 'http://localhost:1234/v1';
+  d.querySelector('#llmModel').value = 'test-model';
+  input('#llmApiKey', 'memory-only-secret');
+  d.querySelector('#llmTimeout').value = '30';
+  click('#saveLlmBtn');
+  if (d.querySelector('#llmApiKey').value !== 'memory-only-secret') throw new Error('LLM APIキーがセッションメモリに保持されていない');
+  click('#testLlmBtn');
+  await waitFor(() => d.querySelector('#llmConnectionStatus').textContent.includes('接続済み'), '外部LLM接続テストが完了しない');
+  if (!llmRequests.some(x => x.url === 'http://localhost:1234/v1/models')) throw new Error('OpenAI互換modelsエンドポイントへ接続していない');
+
   click('[data-view="operations"]');
   click('#newOperationBtn');
   change('#opName', 'IRON LANTERN作戦');
@@ -127,6 +171,18 @@ const { pathToFileURL } = require("url");
   click('#finishShapeBtn');
   click('#generateCoaBtn');
   if (d.querySelectorAll('.coa-card').length !== 3) throw new Error('JANUSのCOAが3案生成されていない');
+  change('#coaGeneratorMode', 'external');
+  click('#generateCoaBtn');
+  await waitFor(() => d.querySelectorAll('.coa-card').length === 3 && d.querySelector('#coaCards').textContent.includes('LLM直接型'), '外部LLMのCOA生成が完了しない');
+  if (!d.querySelector('#coaCards').textContent.includes('外部LLM · test-model')) throw new Error('外部LLM生成元がCOAに表示されない');
+  click('#runRedTeamBtn');
+  await waitFor(() => d.querySelectorAll('#redTeamResults .red-team-item').length === 2, '外部LLMのレッドチーム検証が完了しない');
+  if (!d.querySelector('#redTeamResults').textContent.includes('単一の補給経路') || !d.querySelector('#redTeamResults').textContent.includes('代替経路')) throw new Error('レッドチーム指摘と軽減策が表示されない');
+  const chatRequests = llmRequests.filter(x => x.url.endsWith('/chat/completions'));
+  if (chatRequests.length !== 2) throw new Error(`外部LLM chat呼出回数が不正: ${chatRequests.length}`);
+  if (chatRequests.some(x => x.body.includes('memory-only-secret'))) throw new Error('APIキーがLLM本文へ混入している');
+  if (chatRequests.some(x => x.headers.Authorization !== 'Bearer memory-only-secret')) throw new Error('APIキーがAuthorizationヘッダーへ設定されていない');
+  if (!chatRequests[0].body.includes('u-bde') || chatRequests[0].body.includes('AN/TPS-77')) throw new Error('LLM送信コンテキストが現在の作戦・割当戦力へ限定されていない');
   click('#validateOperationBtn');
   const janusErrors = [...d.querySelectorAll('#operationChecks .check-item.error')];
   if (janusErrors.length) throw new Error(`JANUS整合性検査に想定外エラー: ${janusErrors.map(x=>x.textContent).join(' / ')}`);
@@ -155,6 +211,6 @@ const { pathToFileURL } = require("url");
   if (d.querySelectorAll('#judgeComparison .judge-plan').length !== 2 || !d.querySelector('#judgeComparison').textContent.includes('最終裁定は審判が行う')) throw new Error('審判比較が機能していない');
   if (errors.length) throw new Error(`画面エラー: ${errors.join(" / ")}`);
 
-  console.log(JSON.stringify({ catalogItems: 1652, importedWeaponRows: 1651, broadCategoryDefinitions: 16, activeCategories: 15, uncategorizedItems: categoryCounts["その他"]||0, artilleryItems: categoryCounts["火砲・ロケット砲"], surfaceCombatantItems: categoryCounts["水上戦闘艦艇"], fixedWingItems: categoryCounts["固定翼航空機"], removedGenericItems: ["主力戦車","小銃"], sampleTank: "M1A2", priceDataMatches: 0, categoryFilterRadarItems: 32, initialPersonnel: initial.trim(), initialTankTotal: 88, updatedTankTotal: 75, friendlyFrameActualAspect: actualAspect, hostileFrameBounds: "1:1", appDarkOnly: true, chartBackground: "white", connectorGap, chartNodes: nodeCount, janusMapEmbedded: true, janusMapGridKm: 100, janusMappedRouteKm: 100, janusMapZoom: true, janusCoas: 3, janusChecksPassed: true, janusFiveParagraphOrder: true, janusSnapshotLocked: true, janusFrozenAfterOrbatChange: true, janusJudgePlans: 2, pageErrors: errors.length }));
+  console.log(JSON.stringify({ catalogItems: 1652, importedWeaponRows: 1651, broadCategoryDefinitions: 16, activeCategories: 15, uncategorizedItems: categoryCounts["その他"]||0, artilleryItems: categoryCounts["火砲・ロケット砲"], surfaceCombatantItems: categoryCounts["水上戦闘艦艇"], fixedWingItems: categoryCounts["固定翼航空機"], removedGenericItems: ["主力戦車","小銃"], sampleTank: "M1A2", priceDataMatches: 0, categoryFilterRadarItems: 32, initialPersonnel: initial.trim(), initialTankTotal: 88, updatedTankTotal: 75, friendlyFrameActualAspect: actualAspect, hostileFrameBounds: "1:1", appDarkOnly: true, chartBackground: "white", connectorGap, chartNodes: nodeCount, janusMapEmbedded: true, janusMapGridKm: 100, janusMappedRouteKm: 100, janusMapZoom: true, janusCoas: 3, externalLlmModels: 1, externalLlmCoas: 3, externalLlmRedTeamFindings: 2, externalLlmRequests: llmRequests.length, llmContextScoped: true, llmApiKeyMemoryOnly: true, janusChecksPassed: true, janusFiveParagraphOrder: true, janusSnapshotLocked: true, janusFrozenAfterOrbatChange: true, janusJudgePlans: 2, pageErrors: errors.length }));
   dom.window.close();
 })().catch(error => { console.error(error); process.exit(1); });

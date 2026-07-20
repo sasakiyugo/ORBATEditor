@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#132238">
   <title>ORBAT Editor</title>
   <script>document.documentElement.dataset.theme="dark";document.documentElement.style.colorScheme="dark";</script>
-  <link rel="stylesheet" href="styles.css?v=0.6.0">
-  <link rel="stylesheet" href="theme.css?v=0.6.0">
+  <link rel="stylesheet" href="styles.css?v=0.7.0">
+  <link rel="stylesheet" href="theme.css?v=0.7.0">
 </head>
 <body>
   <header class="app-header">
@@ -122,7 +122,7 @@
                 <div class="janus-card"><div class="card-heading"><div><span class="eyebrow">FORCE PACKAGE</span><h2>戦力パッケージ編成</h2></div></div><div class="force-add"><select id="opUnitPicker"></select><select id="opTaskPicker"><option>主攻</option><option>助攻</option><option>予備</option><option>火力支援</option><option>防空</option><option>ISR</option><option>電子戦</option><option>海上支援</option><option>航空支援</option><option>兵站</option><option>戦略予備</option></select><button id="addOperationUnitBtn" class="primary">部隊を割当</button></div><div id="operationForces"></div></div>
               </section>
               <section id="opPaneMap" class="operation-pane">
-                <div class="janus-card"><div class="card-heading"><div><span class="eyebrow">OPERATIONAL OVERLAY</span><h2>統合作戦状況図</h2></div><span class="muted">クリックで座標を追加</span></div><div class="map-toolbar"><select id="mapShapeType"><option value="objective">作戦目標（点）</option><option value="route">進出経路（折線）</option><option value="area">作戦区域（多角形）</option><option value="phase">フェーズライン（折線）</option></select><input id="mapShapeName" placeholder="図形名"><button id="finishShapeBtn">図形確定</button><button id="cancelShapeBtn">入力取消</button></div><div class="operation-map-wrap"><svg id="operationMap" viewBox="0 0 1000 600" aria-label="作戦状況図"></svg></div><div id="operationShapes"></div></div>
+                <div class="janus-card"><div class="card-heading"><div><span class="eyebrow">OPERATIONAL OVERLAY</span><h2>統合作戦状況図</h2></div><span class="muted">小マス100km／太線10マス1,000km</span></div><div class="map-toolbar"><select id="mapShapeType"><option value="objective">作戦目標（点）</option><option value="route">進出経路（折線）</option><option value="area">作戦区域（多角形）</option><option value="phase">フェーズライン（折線）</option></select><input id="mapShapeName" placeholder="図形名"><button id="finishShapeBtn">図形確定</button><button id="cancelShapeBtn">入力取消</button><label class="map-snap"><input id="mapSnapGrid" type="checkbox" checked> 小マスへスナップ</label><div class="map-zoom"><button id="mapZoomOutBtn" title="縮小">－</button><button id="mapZoomResetBtn">100%</button><button id="mapZoomInBtn" title="拡大">＋</button></div></div><div id="mapDistanceSummary" class="map-distance-summary"></div><div class="operation-map-wrap"><svg id="operationMap" viewBox="0 0 1536 1024" aria-label="旧世界作戦状況図"><image id="operationMapBase" x="0" y="0" width="1536" height="1024" preserveAspectRatio="none"></image><g id="operationMapOverlay"></g></svg></div><div id="operationShapes"></div></div>
               </section>
               <section id="opPaneCoa" class="operation-pane">
                 <div class="janus-card"><div class="card-heading"><div><span class="eyebrow">COURSES OF ACTION</span><h2>行動方針</h2></div><button id="generateCoaBtn" class="primary">3案を生成</button></div><p class="janus-note">現版はオフラインの決定論的テンプレートで生成する。部隊・兵器は既存IDのみを参照し、将来のLLMアダプターと交換可能である。</p><div id="coaCards" class="coa-grid"></div></div>
@@ -150,7 +150,12 @@
 
   <div id="modal" class="modal" hidden><div class="modal-card"><div class="modal-heading"><h2 id="modalTitle"></h2><button id="modalClose">×</button></div><div id="modalBody"></div><div class="modal-actions"><button id="modalCancel">キャンセル</button><button id="modalConfirm" class="primary">保存</button></div></div></div>
   <div id="toast" class="toast" role="status"></div>
-  <script src="catalog-data.js?v=0.6.0"></script>
-  <script src="app.js?v=0.6.0"></script>
+  <script src="catalog-data.js?v=0.7.0"></script>
+  <script src="map-data-1.js?v=0.7.0"></script>
+  <script src="map-data-2.js?v=0.7.0"></script>
+  <script src="map-data-3.js?v=0.7.0"></script>
+  <script src="map-data-4.js?v=0.7.0"></script>
+  <script src="map-data-5.js?v=0.7.0"></script>
+  <script src="app.js?v=0.7.0"></script>
 </body>
 </html>

@@ -4,7 +4,7 @@
   "private": true,
   "description": "Offline ORBAT editor with NATO-style symbols and automatic roll-ups",
   "scripts": {
-    "test": "node --check app.js && node --check map-data.js && node tests/smoke.cjs"
+    "test": "node --check app.js && node --check map-data-1.js && node --check map-data-2.js && node --check map-data-3.js && node --check map-data-4.js && node --check map-data-5.js && node tests/smoke.cjs"
   },
   "devDependencies": {
     "jsdom": "^26.1.0"
